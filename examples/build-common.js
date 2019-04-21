@@ -19,6 +19,7 @@ const commonArgs = `--display-chunks --display-max-modules 99999 --display-origi
 let readme = fs.readFileSync(require("path").join(process.cwd(), "template.md"), "utf-8");
 
 const doCompileAndReplace = (args, prefix, callback) => {
+	console.log(`compiling ${process.cwd()} for ${prefix}`);
 	if(!tc.needResults(readme, prefix)) {
 		callback();
 		return;
@@ -33,7 +34,9 @@ const doCompileAndReplace = (args, prefix, callback) => {
 		throw new Error("Please install webpack-cli at root.");
 	}
 
-	cp.exec(`node ${path.resolve(__dirname, "../bin/webpack.js")} ${args} ${displayReasons} ${commonArgs} --json > stats.json`, (error, stdout, stderr) => {
+	const command = `node ${path.resolve(__dirname, "../bin/webpack.js")} ${args} ${displayReasons} ${commonArgs}`;
+	console.log(command);
+	cp.exec(command, (error, stdout, stderr) => {
 		if(stderr)
 			console.log(stderr);
 		if(error !== null)
@@ -46,10 +49,12 @@ const doCompileAndReplace = (args, prefix, callback) => {
 		}
 		callback();
 	});
-};
+}
+
+const statsPlugin = path.resolve(__dirname, "./stats-plugin-wrapper");
 
 async.series([
-	callback => doCompileAndReplace("--mode production", "production", callback),
+	callback => doCompileAndReplace(`--mode production --plugin ${statsPlugin}`, "production", callback),
 	callback => doCompileAndReplace("--mode development --devtool none", "development", callback),
 	callback => doCompileAndReplace("--mode none --output-pathinfo", "", callback)
 ], () => {
